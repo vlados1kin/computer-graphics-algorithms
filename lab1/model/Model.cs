@@ -23,5 +23,40 @@ namespace lab1.model
         public List<Vector3> Normals { get; } = [];
 
         public List<Face> Faces { get; } = [];
+
+        public void writeToFile(string filePath)
+        {
+            using (StreamWriter writer = new StreamWriter(filePath))
+            {
+                foreach (var v in OriginalVertices)
+                {
+                    writer.WriteLine($"v {v.X} {v.Y} {v.Z} {v.W}");
+                }
+               /* foreach (var vt in TextureCoords)
+                {
+                    writer.WriteLine($"vt {vt.X} {vt.Y} {vt.Z}");
+                }
+                foreach (var vn in Normals)
+                {
+                    writer.WriteLine($"vn {vn.X} {vn.Y} {vn.Z}");
+                }
+                foreach (var face in Faces)
+                {
+                    writer.Write("f");
+                    foreach (var fv in face.Vertices)
+                    {
+                        writer.Write($" {fv.VertexIndex}");
+                        if (fv.TextureIndex > 0 || fv.NormalIndex > 0)
+                        {
+                            writer.Write("/");
+                            if (fv.TextureIndex > 0) writer.Write($"{fv.TextureIndex}");
+                            if (fv.NormalIndex > 0) writer.Write($"/{fv.NormalIndex}");
+                        }
+                    }
+                    writer.WriteLine();
+                }*/
+            }
+        }
+
     }
 }

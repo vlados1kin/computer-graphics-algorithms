@@ -41,6 +41,7 @@ namespace lab1.parser
                         break;
                 }
             }
+            model.TransformedVertices = new Vector4[model.OriginalVertices.Count];
             return model;
         }
 
