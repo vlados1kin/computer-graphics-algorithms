@@ -7,6 +7,8 @@ using System.Windows.Media.Imaging;
 using Microsoft.WindowsAPICodePack.Dialogs;
 using Parser;
 using Parser.Models;
+using Parser.Raster;
+using Renderer = Parser.Raster.Renderer;
 using Vector = System.Windows.Vector;
 
 namespace Main;
@@ -52,16 +54,17 @@ public class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(BackgroundColor));
         }
     }
-
-    private string _selectedModelInfo = string.Empty;
-
-    public string SelectedModelInfo
+    
+    private RenderMode _selectedRenderMode;
+    
+    public RenderMode SelectedRenderMode
     {
-        get => _selectedModelInfo;
+        get => _selectedRenderMode;
         set
         {
-            _selectedModelInfo = value;
-            OnPropertyChanged(nameof(SelectedModelInfo));
+            _selectedRenderMode = value;
+            UpdateView();
+            OnPropertyChanged(nameof(SelectedRenderMode));
         }
     }
 
@@ -89,6 +92,9 @@ public class MainViewModel : INotifyPropertyChanged
         MouseLeftButtonDownCommand = new CommandHandlers(OnMouseLeftButtonDown);
         MouseRightButtonDownCommand = new CommandHandlers(OnMouseRightButtonDown);
         KeyDownCommand = new CommandHandlers(OnKeyDown);
+        
+        SelectedRenderMode = RenderMode.Wireframe;
+        Scene.Lights.Add(new Light());
     }
 
     private void LoadFile()
@@ -289,17 +295,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void UpdateView()
     {
-        if (WriteableBitmap == null) return;
-
-        Renderer.ClearBitmap(WriteableBitmap, BackgroundColor);
-
-        Scene.Camera.ChangeEye();
-        Scene.UpdateAllModels();
-
-        foreach (var model in Scene.Models)
-        {
-            Renderer.DrawWireframe(model, WriteableBitmap, ForegroundColor, Scene.Camera);
-        }
+        Renderer.Render(Scene, WriteableBitmap, BackgroundColor, ForegroundColor, SelectedRenderMode);
         
         OnPropertyChanged(nameof(WriteableBitmap));
     }

@@ -6,6 +6,7 @@ namespace Parser.Models;
 public class Scene
 {
     public List<ObjModel> Models { get; } = [];
+    public List<Light> Lights { get; } = [];
     public Camera Camera { get; set; } = new();
     public int CanvasWidth { get; set; }
     public int CanvasHeight { get; set; }
