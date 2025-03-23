@@ -7,7 +7,7 @@
         xmlns:main="clr-namespace:Main"
         xmlns:raster="clr-namespace:Parser.Raster;assembly=Parser"
         mc:Ignorable="d"
-        Title="Лабораторная работа №1" Loaded="MainWindow_OnLoaded" WindowState="Maximized"
+        Title="АКГ" Loaded="MainWindow_OnLoaded" WindowState="Maximized"
         FocusManager.FocusedElement="{Binding ElementName=ImgDisplay}"
         Background="{DynamicResource MaterialDesignPaper}"
         Foreground="{DynamicResource MaterialDesignBody}">
