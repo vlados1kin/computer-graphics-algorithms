@@ -34,19 +34,10 @@ public static class Renderer
                 }
                 break;
             case RenderMode.FilledTrianglesPhong:
-                // Используем готовые Normals из файлов
                 Rasterizer.ClearZBuffer(scene.CanvasWidth, scene.CanvasHeight, scene.Camera);
                 foreach (var model in scene.Models)
                 {
                     Rasterizer.DrawFilledTrianglePhong(model, bitmap, scene.Camera, scene.Lights);
-                }
-                break;
-            case RenderMode.FilledTrianglesAveragePhong:
-                // Используем усредненные нормали поверхности всех полигонов
-                Rasterizer.ClearZBuffer(scene.CanvasWidth, scene.CanvasHeight, scene.Camera);
-                foreach (var model in scene.Models)
-                {
-                    Rasterizer.FilledTrianglesAverageFaceNormalPhong(model, bitmap, scene.Camera, scene.Lights);
                 }
                 break;
         }

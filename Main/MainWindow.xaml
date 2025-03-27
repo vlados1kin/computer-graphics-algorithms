@@ -28,7 +28,6 @@
                 <ComboBoxItem Content="Проволочная модель" Tag="{x:Static raster:RenderMode.Wireframe}"/>
                 <ComboBoxItem Content="Ламберт" Tag="{x:Static raster:RenderMode.FilledTrianglesLambert}"/>
                 <ComboBoxItem Content="Фонг" Tag="{x:Static raster:RenderMode.FilledTrianglesPhong}"/>
-                <ComboBoxItem Content="Усредненный Фонг" Tag="{x:Static raster:RenderMode.FilledTrianglesAveragePhong}"/>
             </ComboBox>
         </StackPanel>
 
