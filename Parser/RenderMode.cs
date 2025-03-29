@@ -1,8 +1,9 @@
-﻿namespace Parser.Raster;
+﻿namespace Main;
 
 public enum RenderMode
 {
     Wireframe,
     FilledTrianglesLambert,
-    FilledTrianglesPhong
+    FilledTrianglesPhong,
+    Texture
 }

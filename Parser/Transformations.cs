@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Parser;
+namespace Main;
 
 public static class Transformations
 {

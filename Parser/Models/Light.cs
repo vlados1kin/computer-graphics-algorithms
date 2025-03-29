@@ -1,45 +1,87 @@
 ﻿using System.Numerics;
 using System.Windows.Media;
 
-namespace Parser.Models;
+namespace Main.Models;
 
 public class Light
 {
-    public Vector3 Direction { get; set; } = new(1, 2, 1);
-    
-    public Color Ambient { get; set; } = Colors.White;
+    public Vector3 Position { get; set; } = new(1, 1, 2);
 
-    public Color Diffuse { get; set; } = Colors.HotPink;
+    public Vector3 Color { get; set; } = Vector3.One; // Аналог Colors.White.ToVector3() / 255f
 
-    public Color Specular { get; set; } = Colors.Purple;
-    
-    public float Ka { get; set; } = 0.1f;
-    
-    public float Kd { get; set; } = 1.0f;
+    public float Intensity { get; set; } = 1.0f;
 
-    public float Ks { get; set; } = 0.2f;
+    public Light() { }
     
-    public float LikeADiamond { get; set; } = 32f;
-    
-    public static Color ApplyPhongShading(List<Light> lights, Vector3 normal, Vector3 viewDirection, Vector3 fragWorld)
+    public Light(Vector3 position, Vector3 color, float intensity)
     {
-        var ambient = Vector3.Zero;
-        var diffuse = Vector3.Zero;
-        var specular = Vector3.Zero;
-        
-        foreach (var light in lights)
-        {
-            ambient += new Vector3(light.Ambient.R, light.Ambient.G, light.Ambient.B) * light.Ka;
-            var lightDir = Vector3.Normalize(light.Direction - fragWorld);
-            var ndotL = MathF.Max(Vector3.Dot(normal, lightDir), 0);
-            diffuse += new Vector3(light.Diffuse.R, light.Diffuse.G, light.Diffuse.B) * ndotL * light.Kd;
-            var reflection = Vector3.Reflect(-lightDir, normal); 
-            var rdotV = MathF.Max(Vector3.Dot(reflection, viewDirection), 0);
-            if (rdotV > 0) specular += new Vector3(light.Specular.R, light.Specular.G, light.Specular.B) * light.Ks * MathF.Pow(rdotV, light.LikeADiamond);
-        }
-        
-        var phong = Vector3.Clamp(ambient + diffuse + specular, Vector3.Zero, new Vector3(255, 255, 255));
-        return Color.FromArgb(255, (byte)phong.X, (byte)phong.Y, (byte)phong.Z);
+        Position = position;
+        Color = color;
+        Intensity = intensity;
     }
     
+    public static Vector3 ApplyPhongShading(
+        List<Light> lights,
+        Vector3 normal,
+        Vector3 viewDirection,
+        Vector3 fragWorld, Vector3 ambientColor, Vector3 ka,
+        Vector3 diffuseColor, Vector3 kd, Vector3 specularColor, Vector3 ks, float shininess)
+    {
+        var ambient = ambientColor * ka;
+        var lighting = ambient;
+
+        foreach (var light in lights)
+        {
+            var lightDir = Vector3.Normalize(light.Position - fragWorld);
+
+            // Diffuse
+            var diff = MathF.Max(Vector3.Dot(normal, lightDir), 0);
+            var diffuse = light.Color * diffuseColor * diff * kd;
+
+            // Specular
+            var reflectDir = Vector3.Reflect(-lightDir, normal);
+            var spec = MathF.Pow(MathF.Max(Vector3.Dot(viewDirection, reflectDir), 0), shininess);
+            var specular = light.Color * specularColor * spec * ks;
+
+            lighting += (diffuse + specular) * light.Intensity;
+        }
+
+        lighting = Vector3.Clamp(lighting, Vector3.Zero, new Vector3(255, 255, 255));
+
+        return lighting;
+    }
+
+    public static Color ApplyLambert(List<Light> lambertLights, Vector3 normal, Color baseColor)
+    {
+        var totalIntensity = 0f;
+        foreach (var light in lambertLights)
+        {
+            var lightDir = Vector3.Normalize(light.Position);
+
+            var intensity = MathF.Max(Vector3.Dot(normal, lightDir), 0);
+
+            totalIntensity += intensity;
+        }
+
+        // Ограничиваем суммарную интенсивность значением 1
+        totalIntensity = MathF.Min(totalIntensity, 1.0f);
+
+        return System.Windows.Media.Color.FromArgb(
+            baseColor.A,
+            (byte)(baseColor.R * totalIntensity),
+            (byte)(baseColor.G * totalIntensity),
+            (byte)(baseColor.B * totalIntensity));
+    }
+
+    public Vector3 TransformLightToScreen(Matrix4x4 view, Matrix4x4 projection, Matrix4x4 viewport)
+    {
+        var transformedPosition = Vector4.Transform(Position, view * projection * viewport);
+
+        if (transformedPosition.W != 0)
+        {
+            transformedPosition /= transformedPosition.W;
+        }
+
+        return transformedPosition.AsVector3();
+    }
 }

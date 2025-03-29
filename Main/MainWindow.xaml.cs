@@ -8,7 +8,7 @@ public partial class MainWindow
     {
         InitializeComponent();
     }
-    
+
     private void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
     {
         if (DataContext is MainViewModel vm)

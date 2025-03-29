@@ -4,20 +4,44 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Main.Models;
+using Main.Parser;
+using Main.Renderer;
 using Microsoft.WindowsAPICodePack.Dialogs;
-using Parser;
-using Parser.Models;
-using Parser.Raster;
-using Renderer = Parser.Raster.Renderer;
-using Vector = System.Windows.Vector;
 
 namespace Main;
 
 public class MainViewModel : INotifyPropertyChanged
 {
-    public Scene Scene { get; set; } = new();
+    private Color _backgroundColor = Colors.Black;
+
+    private Color _foregroundColor = Colors.White;
+    
+    private Point _lastMousePos;
+    
+    private RenderMode _selectedRenderMode;
 
     private WriteableBitmap? _writeableBitmap;
+
+    public MainViewModel()
+    {
+        Scene.Camera = new Camera();
+
+        Scene.CanvasWidth = 800;
+        Scene.CanvasHeight = 600;
+
+        LoadFileCommand = new CommandsHandler(_ => LoadFile());
+        MouseWheelCommand = new CommandsHandler(OnMouseWheel);
+        MouseMoveCommand = new CommandsHandler(OnMouseMove);
+        MouseLeftButtonDownCommand = new CommandsHandler(OnMouseLeftButtonDown);
+        MouseRightButtonDownCommand = new CommandsHandler(OnMouseRightButtonDown);
+        KeyDownCommand = new CommandsHandler(OnKeyDown);
+
+        SelectedRenderMode = RenderMode.Wireframe;
+        Scene.Lights.Add(new Light());
+    }
+
+    public Scene Scene { get; set; } = new();
 
     public WriteableBitmap? WriteableBitmap
     {
@@ -28,8 +52,6 @@ public class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(WriteableBitmap));
         }
     }
-
-    private Color _foregroundColor = Colors.White;
 
     public Color ForegroundColor
     {
@@ -42,8 +64,6 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    private Color _backgroundColor = Colors.Black;
-
     public Color BackgroundColor
     {
         get => _backgroundColor;
@@ -54,8 +74,15 @@ public class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(BackgroundColor));
         }
     }
+
+    public ICommand LoadFileCommand { get; }
+    public ICommand MouseWheelCommand { get; }
+    public ICommand MouseMoveCommand { get; }
+    public ICommand MouseLeftButtonDownCommand { get; }
+    public ICommand MouseRightButtonDownCommand { get; }
+    public ICommand KeyDownCommand { get; }
     
-    private RenderMode _selectedRenderMode;
+    private float RotateSensitivity => MathF.PI / 360.0f;
     
     public RenderMode SelectedRenderMode
     {
@@ -68,41 +95,13 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    public ICommand LoadFileCommand { get; }
-    public ICommand MouseWheelCommand { get; }
-    public ICommand MouseMoveCommand { get; }
-    public ICommand MouseLeftButtonDownCommand { get; }
-    public ICommand MouseRightButtonDownCommand { get; }
-    public ICommand KeyDownCommand { get; }
-    
-    private Point _lastMousePos;
-    private float RotateSensitivity => MathF.PI / 360.0f;
-
-    public MainViewModel()
-    {
-        Scene.Camera = new Camera();
-
-        Scene.CanvasWidth = 800;
-        Scene.CanvasHeight = 600;
-
-        LoadFileCommand = new CommandHandlers(_ => LoadFile());
-
-        MouseWheelCommand = new CommandHandlers(OnMouseWheel);
-        MouseMoveCommand = new CommandHandlers(OnMouseMove);
-        MouseLeftButtonDownCommand = new CommandHandlers(OnMouseLeftButtonDown);
-        MouseRightButtonDownCommand = new CommandHandlers(OnMouseRightButtonDown);
-        KeyDownCommand = new CommandHandlers(OnKeyDown);
-        
-        SelectedRenderMode = RenderMode.Wireframe;
-        Scene.Lights.Add(new Light());
-    }
+    public event PropertyChangedEventHandler? PropertyChanged;
 
     private void LoadFile()
     {
         using var dlg = new CommonOpenFileDialog();
         dlg.Filters.Add(new CommonFileDialogFilter("OBJ Files", "*.obj"));
         if (dlg.ShowDialog() == CommonFileDialogResult.Ok)
-        {
             try
             {
                 var loadedModel = ObjParser.Parse(dlg.FileName!);
@@ -118,7 +117,6 @@ public class MainViewModel : INotifyPropertyChanged
             {
                 MessageBox.Show("Ошибка загрузки файла: " + ex.Message);
             }
-        }
     }
 
     private void OnMouseWheel(object? parameter)
@@ -157,22 +155,18 @@ public class MainViewModel : INotifyPropertyChanged
             {
                 if (e.LeftButton == MouseButtonState.Pressed && e.RightButton != MouseButtonState.Pressed)
                 {
-                    Point currentPos = e.GetPosition(null);
-                    Vector delta = currentPos - _lastMousePos;
+                    var currentPos = e.GetPosition(null);
+                    var delta = currentPos - _lastMousePos;
                     if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
-                    {
                         Scene.SelectedModel.Rotation = new Vector3(
                             Scene.SelectedModel.Rotation.X,
                             Scene.SelectedModel.Rotation.Y,
                             Scene.SelectedModel.Rotation.Z - (float)delta.X * RotateSensitivity);
-                    }
                     else
-                    {
                         Scene.SelectedModel.Rotation = new Vector3(
                             Scene.SelectedModel.Rotation.X + (float)delta.Y * RotateSensitivity,
                             Scene.SelectedModel.Rotation.Y + (float)delta.X * RotateSensitivity,
                             Scene.SelectedModel.Rotation.Z);
-                    }
 
                     _lastMousePos = currentPos;
 
@@ -185,8 +179,8 @@ public class MainViewModel : INotifyPropertyChanged
             {
                 var currentPos = e.GetPosition(null);
 
-                float xOffset = (float)(currentPos.X - _lastMousePos.X);
-                float yOffset = (float)(currentPos.Y - _lastMousePos.Y);
+                var xOffset = (float)(currentPos.X - _lastMousePos.X);
+                var yOffset = (float)(currentPos.Y - _lastMousePos.Y);
 
 
                 Scene.Camera.Zeta -= yOffset * 0.005f;
@@ -221,7 +215,7 @@ public class MainViewModel : INotifyPropertyChanged
         if (parameter is MouseButtonEventArgs e)
         {
             _lastMousePos = e.GetPosition(null);
-            Point clickPoint = _lastMousePos;
+            var clickPoint = _lastMousePos;
             var pickedModel = Scene.PickModel(clickPoint);
             Scene.SelectedModel = pickedModel;
             UpdateView();
@@ -293,15 +287,15 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    private void UpdateView()
+    public void UpdateView()
     {
-        Renderer.Render(Scene, WriteableBitmap, BackgroundColor, ForegroundColor, SelectedRenderMode);
+        Renderer.Renderer.Render(Scene, WriteableBitmap, BackgroundColor, ForegroundColor, SelectedRenderMode);
         
         OnPropertyChanged(nameof(WriteableBitmap));
     }
 
-    public event PropertyChangedEventHandler? PropertyChanged;
-    
-    protected void OnPropertyChanged(string propertyName) =>
+    protected void OnPropertyChanged(string propertyName)
+    {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 }

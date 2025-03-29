@@ -5,29 +5,30 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
         xmlns:main="clr-namespace:Main"
-        xmlns:raster="clr-namespace:Parser.Raster;assembly=Parser"
+        xmlns:enum="clr-namespace:Main;assembly=Parser"
         mc:Ignorable="d"
         Title="АКГ" Loaded="MainWindow_OnLoaded" WindowState="Maximized"
         FocusManager.FocusedElement="{Binding ElementName=ImgDisplay}"
         Background="{DynamicResource MaterialDesignPaper}"
         Foreground="{DynamicResource MaterialDesignBody}">
-
+    
     <Window.DataContext>
-        <main:MainViewModel/>
+        <main:MainViewModel />
     </Window.DataContext>
-
+    
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Orientation="Horizontal" Background="Black">
-            <Button Focusable="False" Content="Открыть" Margin="5" Padding="5" Command="{Binding LoadFileCommand}" Foreground="White"/>
+            <Button Focusable="False" Content="Открыть" Margin="5" Padding="5" Command="{Binding LoadFileCommand}" />
             <ComboBox HorizontalAlignment="Center" VerticalAlignment="Center" Focusable="False" SelectedValue="{Binding SelectedRenderMode}" SelectedValuePath="Tag" Margin="5">
-                <ComboBoxItem Content="Проволочная модель" Tag="{x:Static raster:RenderMode.Wireframe}"/>
-                <ComboBoxItem Content="Ламберт" Tag="{x:Static raster:RenderMode.FilledTrianglesLambert}"/>
-                <ComboBoxItem Content="Фонг" Tag="{x:Static raster:RenderMode.FilledTrianglesPhong}"/>
+                <ComboBoxItem Content="Проволочная модель" Tag="{x:Static enum:RenderMode.Wireframe}" />
+                <ComboBoxItem Content="Ламберт" Tag="{x:Static enum:RenderMode.FilledTrianglesLambert}" />
+                <ComboBoxItem Content="Фонг" Tag="{x:Static enum:RenderMode.FilledTrianglesPhong}" />
+                <ComboBoxItem Content="Текстура" Tag="{x:Static enum:RenderMode.Texture}" />
             </ComboBox>
         </StackPanel>
 
@@ -37,19 +38,19 @@
                    Source="{Binding WriteableBitmap}" Cursor="Hand">
                 <i:Interaction.Triggers>
                     <i:EventTrigger EventName="MouseWheel">
-                        <i:InvokeCommandAction Command="{Binding MouseWheelCommand}" PassEventArgsToCommand="True"/>
+                        <i:InvokeCommandAction Command="{Binding MouseWheelCommand}" PassEventArgsToCommand="True" />
                     </i:EventTrigger>
                     <i:EventTrigger EventName="MouseMove">
-                        <i:InvokeCommandAction Command="{Binding MouseMoveCommand}" PassEventArgsToCommand="True"/>
+                        <i:InvokeCommandAction Command="{Binding MouseMoveCommand}" PassEventArgsToCommand="True" />
                     </i:EventTrigger>
                     <i:EventTrigger EventName="MouseLeftButtonDown">
-                        <i:InvokeCommandAction Command="{Binding MouseLeftButtonDownCommand}" PassEventArgsToCommand="True"/>
+                        <i:InvokeCommandAction Command="{Binding MouseLeftButtonDownCommand}" PassEventArgsToCommand="True" />
                     </i:EventTrigger>
                     <i:EventTrigger EventName="MouseRightButtonDown">
-                        <i:InvokeCommandAction Command="{Binding MouseRightButtonDownCommand}" PassEventArgsToCommand="True"/>
+                        <i:InvokeCommandAction Command="{Binding MouseRightButtonDownCommand}" PassEventArgsToCommand="True" />
                     </i:EventTrigger>
                     <i:EventTrigger EventName="KeyDown">
-                        <i:InvokeCommandAction Command="{Binding KeyDownCommand}" PassEventArgsToCommand="True"/>
+                        <i:InvokeCommandAction Command="{Binding KeyDownCommand}" PassEventArgsToCommand="True" />
                     </i:EventTrigger>
                 </i:Interaction.Triggers>
             </Image>

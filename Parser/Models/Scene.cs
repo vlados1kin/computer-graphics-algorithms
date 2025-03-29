@@ -1,80 +1,145 @@
-﻿using System.Numerics;
+﻿using System.Collections.ObjectModel;
+using System.Numerics;
 using System.Windows;
+using System.Windows.Controls;
+using Main.Models;
 
-namespace Parser.Models;
+namespace Main.Models;
 
 public class Scene
 {
+    // Список моделей, отображаемых на холсте.
     public List<ObjModel> Models { get; } = [];
+
+    // Список лучей/точек света, падающих на 3D объект
     public List<Light> Lights { get; } = [];
+
+    // Камера для сцены.
     public Camera Camera { get; set; } = new();
+
+    // Размеры холста (например, размер WriteableBitmap).
     public int CanvasWidth { get; set; }
     public int CanvasHeight { get; set; }
+
     public ObjModel? SelectedModel { get; set; }
+
+    public HDRiBackground? Background { get; set; }
+
+    public Matrix4x4 GetViewportMatrix()
+    {
+        return Transformations.CreateViewportMatrix(CanvasWidth, CanvasHeight);
+    }
+
     public void UpdateAllModels()
     {
         var view = Camera.GetViewMatrix();
         var projection = Camera.GetProjectionMatrix();
-        var viewport = Transformations.CreateViewportMatrix(CanvasWidth, CanvasHeight);
+        var viewport = GetViewportMatrix();
 
-        foreach (var model in Models)
-        {
-            UpdateModelTransform(model, view, projection, viewport);
-        }
+        foreach (var model in Models) UpdateModelTransform(model, view, projection, viewport);
+    }
+
+    public void UpdateSelectedModel()
+    {
+        if (SelectedModel is null)
+            return;
+
+        var view = Camera.GetViewMatrix();
+        var projection = Camera.GetProjectionMatrix();
+        var viewport = GetViewportMatrix();
+
+        UpdateModelTransform(SelectedModel, view, projection, viewport);
     }
 
     private void UpdateModelTransform(ObjModel model, Matrix4x4 view, Matrix4x4 projection, Matrix4x4 viewport)
     {
+        // Вычисляем мировую матрицу для модели на основе её локальных параметров:
         var world = Transformations.CreateWorldTransform(
             model.Scale,
             Matrix4x4.CreateFromYawPitchRoll(model.Rotation.Y, model.Rotation.X, model.Rotation.Z),
             model.Translation);
 
-        // World * View * Projection * Viewport
+        // Композиция матриц: World * View * Projection * Viewport
         var finalTransform = world * view * projection * viewport;
         model.ApplyFinalTransformation(finalTransform, Camera);
     }
 
     public ObjModel? PickModel(Point clickPoint)
     {
-        List<ObjModel> candidates = [];
+        ObjModel? pickedModel = null;
+        var bestDepth = float.MaxValue;
 
         foreach (var model in Models)
         {
-            Rect bb;
             if (model.TransformedVertices.Length == 0)
-                bb = Rect.Empty;
+                continue;
 
-            var minX = double.MaxValue;
-            var minY = double.MaxValue;
-            var maxX = double.MinValue;
-            var maxY = double.MinValue;
+            // Вычисляем экранный bounding box для модели
+            float minX = float.MaxValue, minY = float.MaxValue;
+            float maxX = float.MinValue, maxY = float.MinValue;
+            var modelDepth = float.MaxValue;
 
             foreach (var v in model.TransformedVertices)
             {
-                if (v.X < minX) minX = v.X;
-                if (v.Y < minY) minY = v.Y;
-                if (v.X > maxX) maxX = v.X;
-                if (v.Y > maxY) maxY = v.Y;
+                minX = MathF.Min(minX, v.X);
+                minY = MathF.Min(minY, v.Y);
+                maxX = MathF.Max(maxX, v.X);
+                maxY = MathF.Max(maxY, v.Y);
+                // Используем минимальное Z (ближайшую к камере точку)
+                modelDepth = MathF.Min(modelDepth, v.Z);
             }
 
-            bb =new Rect(minX, minY, maxX - minX, maxY - minY);
-            if (bb.Contains(clickPoint))
-                candidates.Add(model);
+            // Проверяем, находится ли точка клика внутри bounding box
+            if (clickPoint.X >= minX && clickPoint.X <= maxX &&
+                clickPoint.Y >= minY && clickPoint.Y <= maxY)
+                // Если моделей несколько, выбираем ту, которая ближе к камере (меньший Z)
+                if (modelDepth < bestDepth)
+                {
+                    bestDepth = modelDepth;
+                    pickedModel = model;
+                }
         }
 
-        if (candidates.Count == 0)
-            return null;
+        return pickedModel;
+    }
 
-        candidates.Sort((a, b) =>
+    public Light? PickLight(Point clickPoint, Image image, float radius = 10.0f)
+    {
+        Light? pickedLight = null;     
+        var bestDepth = float.MaxValue;
+
+        // Преобразуем координаты клика из системы координат окна в систему координат Image
+        var imageClickPoint = image.TransformToVisual(Application.Current.MainWindow)
+            .Transform(new Point(0, 0));
+        imageClickPoint = new Point(clickPoint.X - imageClickPoint.X, clickPoint.Y - imageClickPoint.Y);
+
+        foreach (var light in Lights)
         {
-            var depthA = GetModelAverageDepth(a);
-            var depthB = GetModelAverageDepth(b);
-            return depthA.CompareTo(depthB);
-        });
+            // Преобразуем позицию источника света в экранные координаты
+            var lightPosition = light.Position;
+            var view = Camera.GetViewMatrix();
+            var projection = Camera.GetProjectionMatrix();
+            var viewport = GetViewportMatrix();
 
-        return candidates[^1];
+            var transformedPosition = Vector4.Transform(new Vector4(lightPosition, 1.0f), view * projection * viewport);
+            if (transformedPosition.W != 0)
+                transformedPosition /= transformedPosition.W;
 
-        float GetModelAverageDepth(ObjModel model) => model.TransformedVertices.Length == 0 ? float.MaxValue : model.TransformedVertices.Sum(v => v.Z) / model.TransformedVertices.Length;
+            var screenPosition = new Point(transformedPosition.X, transformedPosition.Y);
+
+            // Проверяем, находится ли курсор в пределах радиуса от позиции источника света
+            if (Math.Abs(imageClickPoint.X - screenPosition.X) <= radius &&
+                Math.Abs(imageClickPoint.Y - screenPosition.Y) <= radius)
+            {
+                // Используем Z-координату для определения ближайшего источника света
+                if (transformedPosition.Z < bestDepth)
+                {
+                    bestDepth = transformedPosition.Z;
+                    pickedLight = light;
+                }
+            }
+        }
+
+        return pickedLight;
     }
 }
