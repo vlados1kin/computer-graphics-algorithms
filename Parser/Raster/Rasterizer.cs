@@ -24,7 +24,7 @@ public static class Rasterizer
         }
     }
     
-    public static unsafe void DrawFilledTriangleLambert(ObjModel model, WriteableBitmap bitmap, Color color, Camera camera, List<Light> lights)
+    public static unsafe void Lambert(ObjModel model, WriteableBitmap bitmap, Color color, Camera camera, List<Light> lights)
     {
         var width = bitmap.PixelWidth;
         var height = bitmap.PixelHeight;
@@ -80,7 +80,7 @@ public static class Rasterizer
                     continue;
                 }
 
-                DrawFilledTriangleLambert(screenV0, screenV1, screenV2, shadedColor, buffer, width, height);
+                Lambert(screenV0, screenV1, screenV2, shadedColor, buffer, width, height);
             }
         });
 
@@ -88,7 +88,7 @@ public static class Rasterizer
         bitmap.Unlock();
     }
     
-    private static unsafe void DrawFilledTriangleLambert(Vector3 v0, Vector3 v1, Vector3 v2, Color color, int* buffer, int width, int height)
+    private static unsafe void Lambert(Vector3 v0, Vector3 v1, Vector3 v2, Color color, int* buffer, int width, int height)
     {
         var minX = Math.Max(0, (int)Math.Floor(Math.Min(v0.X, Math.Min(v1.X, v2.X))));
         var maxX = Math.Min(width - 1, (int)Math.Ceiling(Math.Max(v0.X, Math.Max(v1.X, v2.X))));
@@ -132,7 +132,7 @@ public static class Rasterizer
         }
     }
     
-    public static unsafe void DrawFilledTrianglePhong(ObjModel model, WriteableBitmap bitmap, Camera camera, List<Light> lights)
+    public static unsafe void Phong(ObjModel model, WriteableBitmap bitmap, Camera camera, List<Light> lights)
     {
         var width = bitmap.PixelWidth;
         var height = bitmap.PixelHeight;
@@ -193,7 +193,7 @@ public static class Rasterizer
                 var n1 = face.Vertices[j].NormalIndex > 0 ? Vector3.TransformNormal(model.Normals[face.Vertices[j].NormalIndex - 1], world) : faceNormal;
                 var n2 = face.Vertices[j + 1].NormalIndex > 0 ? Vector3.TransformNormal(model.Normals[face.Vertices[j + 1].NormalIndex - 1], world) : faceNormal;
 
-                DrawFilledTrianglePhong(screenV0, screenV1, screenV2,
+                Phong(screenV0, screenV1, screenV2,
                     n0, n1, n2, worldV0, worldV1, worldV2,
                     buffer, width, height, lights, camera);
             }
@@ -203,7 +203,7 @@ public static class Rasterizer
         bitmap.Unlock();
     }
     
-    private static unsafe void DrawFilledTrianglePhong(Vector3 v0, Vector3 v1, Vector3 v2, 
+    private static unsafe void Phong(Vector3 v0, Vector3 v1, Vector3 v2, 
         Vector3 n0, Vector3 n1, Vector3 n2, Vector3 w0, Vector3 w1, Vector3 w2,
         int* buffer, int width, int height, List<Light> lights, Camera camera)
     {

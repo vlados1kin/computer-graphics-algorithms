@@ -30,14 +30,14 @@ public static class Renderer
                 Rasterizer.ClearZBuffer(scene.CanvasWidth, scene.CanvasHeight, scene.Camera);
                 foreach (var model in scene.Models)
                 {
-                    Rasterizer.DrawFilledTriangleLambert(model, bitmap, foregroundColor, scene.Camera, scene.Lights);
+                    Rasterizer.Lambert(model, bitmap, foregroundColor, scene.Camera, scene.Lights);
                 }
                 break;
             case RenderMode.FilledTrianglesPhong:
                 Rasterizer.ClearZBuffer(scene.CanvasWidth, scene.CanvasHeight, scene.Camera);
                 foreach (var model in scene.Models)
                 {
-                    Rasterizer.DrawFilledTrianglePhong(model, bitmap, scene.Camera, scene.Lights);
+                    Rasterizer.Phong(model, bitmap, scene.Camera, scene.Lights);
                 }
                 break;
         }
