@@ -6,11 +6,11 @@ namespace Main.ImageHelpers;
 
 public static class TextureLoader
 {
-    private static readonly ConcurrentDictionary<string, BitmapImage> _cache = new();
+    private static readonly ConcurrentDictionary<string, BitmapImage> Cache = new();
 
     public static BitmapImage? Load(string path)
     {
-        if (_cache.TryGetValue(path, out var image))
+        if (Cache.TryGetValue(path, out var image))
             return image;
 
         if (!File.Exists(path)) return null;
@@ -22,12 +22,7 @@ public static class TextureLoader
         bitmap.EndInit();
         bitmap.Freeze();
 
-        _cache[path] = bitmap;
+        Cache[path] = bitmap;
         return bitmap;
-    }
-
-    public static void ClearCache()
-    {
-        _cache.Clear();
     }
 }

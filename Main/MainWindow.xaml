@@ -28,7 +28,7 @@
                 <ComboBoxItem Content="Проволочная модель" Tag="{x:Static enum:RenderMode.Wireframe}" />
                 <ComboBoxItem Content="Ламберт" Tag="{x:Static enum:RenderMode.FilledTrianglesLambert}" />
                 <ComboBoxItem Content="Фонг" Tag="{x:Static enum:RenderMode.FilledTrianglesPhong}" />
-                <ComboBoxItem Content="Текстура" Tag="{x:Static enum:RenderMode.Texture}" />
+                <ComboBoxItem Content="Текстура" Tag="{x:Static enum:RenderMode.FilledTexture}" />
             </ComboBox>
         </StackPanel>
 

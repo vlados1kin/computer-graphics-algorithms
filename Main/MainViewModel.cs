@@ -6,7 +6,6 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Main.Models;
 using Main.Parser;
-using Main.Renderer;
 using Microsoft.WindowsAPICodePack.Dialogs;
 
 namespace Main;
@@ -287,14 +286,14 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    public void UpdateView()
+    private void UpdateView()
     {
         Renderer.Renderer.Render(Scene, WriteableBitmap, BackgroundColor, ForegroundColor, SelectedRenderMode);
         
         OnPropertyChanged(nameof(WriteableBitmap));
     }
 
-    protected void OnPropertyChanged(string propertyName)
+    private void OnPropertyChanged(string propertyName)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }

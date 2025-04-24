@@ -5,5 +5,5 @@ public enum RenderMode
     Wireframe,
     FilledTrianglesLambert,
     FilledTrianglesPhong,
-    Texture
+    FilledTexture
 }

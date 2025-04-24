@@ -27,56 +27,15 @@ public static class MtlParser
                             materials[current.Name] = current;
                         current = new Material { Name = parts[1] };
                     }
-
                     break;
                 case "map_kd":
                     if (current != null && parts.Length >= 2)
                         current.DiffuseMap = GetFullPath(mtlDirectory, parts[1]);
                     break;
                 case "norm":
-                case "map_norm": // карта нормалей
+                case "map_norm":
                     if (current != null && parts.Length >= 2)
                         current.NormalMap = GetFullPath(mtlDirectory, parts[1]);
-                    break;
-                case "map_bump": // карта рельефа
-                    if (current != null)
-                    {
-                        // Если после map_bump присутствует параметр "-bm"
-                        if (parts.Length >= 4 && parts[1].ToLowerInvariant() == "-bm")
-                        {
-                            // parts[2] - коэффициент, parts[3] - путь к текстуре
-                            current.BumpScale = float.Parse(parts[2], CultureInfo.InvariantCulture);
-                            current.BumpMap = GetFullPath(mtlDirectory, parts[3]);
-                        }
-                        else if (parts.Length >= 2)
-                        {
-                            // Если нет параметра -bm, просто берем путь
-                            current.BumpMap = GetFullPath(mtlDirectory, parts[1]);
-                        }
-                    }
-
-                    break;
-                case "map_mrao": // (metallic - roughness - ambient occlusion)
-                    if (current != null && parts.Length >= 2)
-                        current.MraoMap = GetFullPath(mtlDirectory, parts[1]);
-                    break;
-                case "map_ao": // текстура ambient occlusion
-                    if (current != null && parts.Length >= 2)
-                        current.AoMap = GetFullPath(mtlDirectory, parts[1]);
-                    break;
-                case "map_metallic":
-                case "map_refl":
-                    if (current != null && parts.Length >= 2)
-                        current.MetallicMap = GetFullPath(mtlDirectory, parts[1]);
-                    break;
-                case "map_roughness":
-                case "map_ns":
-                    if (current != null && parts.Length >= 2)
-                        current.RoughnessMap = GetFullPath(mtlDirectory, parts[1]);
-                    break;
-                case "map_ke":
-                    if (current != null && parts.Length >= 2)
-                        current.EmissiveMap = GetFullPath(mtlDirectory, parts[1]);
                     break;
                 case "map_specular":
                     if (current != null && parts.Length >= 2)
@@ -94,22 +53,9 @@ public static class MtlParser
                     if (current != null && parts.Length >= 4)
                         current.Ks = ParseVector3(parts);
                     break;
-                case "ke":
-                    if (current != null && parts.Length >= 4)
-                        current.Ke = ParseVector3(parts);
-                    break;
-                // Коэффициенты
                 case "ns":
                     if (current != null && parts.Length >= 2)
                         current.Shininess = float.Parse(parts[1], CultureInfo.InvariantCulture);
-                    break;
-                case "pm":
-                    if (current != null && parts.Length >= 2)
-                        current.Pm = float.Parse(parts[1], CultureInfo.InvariantCulture);
-                    break;
-                case "pr":
-                    if (current != null && parts.Length >= 2)
-                        current.Pr = float.Parse(parts[1], CultureInfo.InvariantCulture);
                     break;
             }
         }

@@ -4,22 +4,15 @@ using System.Windows.Media.Imaging;
 
 namespace Main.ImageHelpers;
 
-public static class TextureSampler
+public static class TextureUtil
 {
-    // Кэш для хранения массивов пикселей по каждой текстуре.
-    private static readonly ConcurrentDictionary<BitmapImage, byte[]> _textureCache = [];
-
-    /// <summary>
-    ///     Выбирает (sample) цвет из текстуры по заданным координатам u и v.
-    ///     Предполагается, что u,v ∈ [0,1]. Координата v инвертируется, поскольку
-    ///     изображения WPF имеют начало координат в верхнем левом углу.
-    /// </summary>
-    public static Color Sample(BitmapImage texture, float u, float v)
+    private static readonly ConcurrentDictionary<BitmapImage, byte[]> TextureCache = [];
+    
+    public static Color Apply(BitmapImage texture, float u, float v)
     {
         var width = texture.PixelWidth;
         var height = texture.PixelHeight;
 
-        // Приводим u,v к пиксельным координатам.
         var x = (int)(u * width);
         var y = (int)((1.0f - v) * height);
 
@@ -32,15 +25,14 @@ public static class TextureSampler
 
     private static byte[] GetPixels(BitmapImage texture)
     {
-        // Используем кэш для ускорения
-        if (!_textureCache.TryGetValue(texture, out var pixels))
+        if (!TextureCache.TryGetValue(texture, out var pixels))
         {
             var width = texture.PixelWidth;
             var height = texture.PixelHeight;
             var stride = width * 4;
             pixels ??= new byte[height * stride];
             texture.CopyPixels(pixels, stride, 0);
-            _textureCache[texture] = pixels;
+            TextureCache[texture] = pixels;
         }
 
         return pixels;
@@ -54,10 +46,5 @@ public static class TextureSampler
         var r = pixels[index + 2];
         var a = pixels[index + 3];
         return Color.FromArgb(a, r, g, b);
-    }
-
-    public static void ClearCache()
-    {
-        _textureCache.Clear();
     }
 }
