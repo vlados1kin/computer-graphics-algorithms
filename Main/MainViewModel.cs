@@ -1,12 +1,16 @@
 ﻿using System.ComponentModel;
 using System.Numerics;
 using System.Windows;
+using System.Windows.Forms;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Main.Models;
 using Main.Parser;
 using Microsoft.WindowsAPICodePack.Dialogs;
+using KeyEventArgs = System.Windows.Input.KeyEventArgs;
+using MessageBox = System.Windows.MessageBox;
+using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 
 namespace Main;
 
@@ -21,6 +25,8 @@ public class MainViewModel : INotifyPropertyChanged
     private RenderMode _selectedRenderMode;
 
     private WriteableBitmap? _writeableBitmap;
+    
+    private CubeMap? _cubeMap;
 
     public MainViewModel()
     {
@@ -35,6 +41,7 @@ public class MainViewModel : INotifyPropertyChanged
         MouseLeftButtonDownCommand = new CommandsHandler(OnMouseLeftButtonDown);
         MouseRightButtonDownCommand = new CommandsHandler(OnMouseRightButtonDown);
         KeyDownCommand = new CommandsHandler(OnKeyDown);
+        LoadCubeMapCommand = new CommandsHandler(_ => LoadCubeMap());
 
         SelectedRenderMode = RenderMode.Wireframe;
         Scene.Lights.Add(new Light());
@@ -74,12 +81,24 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    public CubeMap? CubeMap
+    {
+        get => _cubeMap;
+        set
+        {
+            _cubeMap = value;
+            UpdateView();
+            OnPropertyChanged(nameof(CubeMap));
+        }
+    }
+
     public ICommand LoadFileCommand { get; }
     public ICommand MouseWheelCommand { get; }
     public ICommand MouseMoveCommand { get; }
     public ICommand MouseLeftButtonDownCommand { get; }
     public ICommand MouseRightButtonDownCommand { get; }
     public ICommand KeyDownCommand { get; }
+    public ICommand LoadCubeMapCommand { get; }
     
     private float RotateSensitivity => MathF.PI / 360.0f;
     
@@ -98,12 +117,13 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void LoadFile()
     {
-        using var dlg = new CommonOpenFileDialog();
-        dlg.Filters.Add(new CommonFileDialogFilter("OBJ Files", "*.obj"));
-        if (dlg.ShowDialog() == CommonFileDialogResult.Ok)
+        using var dialog = new CommonOpenFileDialog();
+        dialog.Filters.Add(new CommonFileDialogFilter("OBJ Files", "*.obj"));
+        if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
+        {
             try
             {
-                var loadedModel = ObjParser.Parse(dlg.FileName!);
+                var loadedModel = ObjParser.Parse(dialog.FileName!);
                 WriteableBitmap ??= new WriteableBitmap(
                     Scene.CanvasWidth, Scene.CanvasHeight, 96, 96, PixelFormats.Bgra32, null);
 
@@ -112,10 +132,29 @@ public class MainViewModel : INotifyPropertyChanged
                 UpdateView();
                 OnPropertyChanged(nameof(Scene));
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                MessageBox.Show("Ошибка загрузки файла: " + ex.Message);
+                MessageBox.Show("Ошибка загрузки файла: " + exception.Message);
             }
+        }
+    }
+
+    private void LoadCubeMap()
+    {
+        using var dialog = new CommonOpenFileDialog();
+        if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
+        {
+            try
+            {
+                CubeMap = new CubeMap(dialog.FileName!);
+                UpdateView();
+                OnPropertyChanged(nameof(Scene));
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show("Ошибка загрузки файла: " + exception.Message);
+            }
+        }
     }
 
     private void OnMouseWheel(object? parameter)
@@ -180,7 +219,6 @@ public class MainViewModel : INotifyPropertyChanged
 
                 var xOffset = (float)(currentPos.X - _lastMousePos.X);
                 var yOffset = (float)(currentPos.Y - _lastMousePos.Y);
-
 
                 Scene.Camera.Zeta -= yOffset * 0.005f;
                 Scene.Camera.Phi += xOffset * 0.005f;
@@ -288,7 +326,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void UpdateView()
     {
-        Renderer.Renderer.Render(Scene, WriteableBitmap, BackgroundColor, ForegroundColor, SelectedRenderMode);
+        Renderer.Renderer.Render(Scene, CubeMap, WriteableBitmap, BackgroundColor, ForegroundColor, SelectedRenderMode);
         
         OnPropertyChanged(nameof(WriteableBitmap));
     }

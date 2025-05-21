@@ -11,6 +11,7 @@ namespace Main.Renderer;
 public static class Rasterizer
 {
     private static float[,]? _buffer;
+    private static CubeMap? _cubeMap;
 
     public static void ClearZBuffer(int width, int height, Camera camera)
     {
@@ -21,6 +22,8 @@ public static class Rasterizer
             _buffer[x, y] = initDepth;
     }
     
+    public static float GetBufferValue(int x, int y) => _buffer != null ? _buffer[y, x] : 0;
+
     public static unsafe void DrawFilledTriangleLambert(ObjModel model, WriteableBitmap wb, Color color, Camera camera, List<Light> lights)
     {
         var width = wb.PixelWidth;
@@ -227,8 +230,10 @@ public static class Rasterizer
         }
     }
     
-    public static unsafe void DrawTexturedTriangles(ObjModel model, WriteableBitmap bitmap, Camera camera, List<Light> lights)
+    public static unsafe void DrawTexturedTriangles(ObjModel model, WriteableBitmap bitmap, Camera camera, List<Light> lights, CubeMap? cubeMap, Scene scene)
     {
+        _cubeMap = cubeMap;
+        
         var width = bitmap.PixelWidth;
         var height = bitmap.PixelHeight;
 
@@ -236,6 +241,10 @@ public static class Rasterizer
 
         bitmap.Lock();
         var buffer = (int*)bitmap.BackBuffer;
+        if (_cubeMap != null)
+        {
+            FillBackground(buffer, camera, width, height, scene);
+        }
 
         Parallel.ForEach(model.Faces, face =>
         {
@@ -373,6 +382,17 @@ public static class Rasterizer
                         specularColor = specColor.ToVector3();
                     }
 
+                    Matrix4x4.Invert(camera.GetCameraTransformation(), out Matrix4x4 invCameraTransform);
+
+                    Vector3 cameraReflectDir = Vector3.TransformNormal(Vector3.Reflect(camera.Target, interpNormal), invCameraTransform);
+
+                    var reflectColor = _cubeMap != null
+                        ? new Vector3(_cubeMap.SampleBackground(cameraReflectDir).X,
+                            _cubeMap.SampleBackground(cameraReflectDir).Y,
+                            _cubeMap.SampleBackground(cameraReflectDir).Z)
+                        : new Vector3(1);
+                    specularColor *= reflectColor;
+                    
                     var viewDir = Vector3.Normalize(camera.Eye - fragWorld);
                     var lighting = Light.ApplyPhongShading(lights, interpNormal, viewDir, fragWorld, ambientColor, material.Ka, diffuseColor, material.Kd, specularColor, material.Shininess);
                     lighting = Vector3.Clamp(lighting, Vector3.Zero, new Vector3(255, 255, 255));
@@ -380,6 +400,69 @@ public static class Rasterizer
                 }
             }
         }
+    }
+    
+    private static unsafe void FillBackground(int* bitmap, Camera camera, int width, int height, Scene scene)
+    {
+        if (_cubeMap == null)
+            return;
+
+        Matrix4x4.Invert(GetProjectionTransform(width, height), out var invProjectionTransform);
+        Matrix4x4.Invert(camera.GetCameraTransformation(), out var invCameraTransform);
+        Vector3 rayOrigin = camera.GetCameraWorldPos();
+        
+        var cubeMapRotation =
+            Matrix4x4.CreateRotationX(scene.SelectedModel!.Rotation.X)
+            * Matrix4x4.CreateRotationY(scene.SelectedModel!.Rotation.Y)
+            * Matrix4x4.CreateRotationZ(scene.SelectedModel!.Rotation.Z);
+
+        var rawPointer = (uint*)bitmap;
+
+        Parallel.For(0, height, y =>
+        {
+            float v = 1.0f - ((float)y / height) * 2.0f;
+
+            for (int x = 0; x < width; x++)
+            {
+                float u = ((float)x / width) * 2.0f - 1.0f;
+
+                Vector3 farNdc = new Vector3(u, v, 0.999f);
+                Vector4 farView = Vector4.Transform(new Vector4(farNdc, 1), invProjectionTransform);
+                farView /= farView.W;
+                farView = Vector4.Transform(farView, invCameraTransform);
+                Vector3 rayDirection = Vector3.Normalize(new Vector3(farView.X, farView.Y, farView.Z) - rayOrigin);
+                rayDirection = Vector3.Transform(rayDirection, cubeMapRotation);
+
+                var sampled = _cubeMap.SampleBackground(rayDirection);
+                var pixelColor = new Vector3(sampled.X, sampled.Y, sampled.Z);
+
+                uint r = (uint)(Math.Clamp(pixelColor.X, 0, 1) * 255.0f);
+                uint g = (uint)(Math.Clamp(pixelColor.Y, 0, 1) * 255.0f);
+                uint b = (uint)(Math.Clamp(pixelColor.Z, 0, 1) * 255.0f);
+                uint color = (0xFFu << 24) | (r << 16) | (g << 8) | b;
+
+                int index = y * width + x;
+                rawPointer[index] = color;
+            }
+        });
+    }
+    
+    private static Matrix4x4 GetProjectionTransform(int width, int height)
+    {
+        float aspectRatio = (float)width / height;
+        float fovVertical = MathF.PI / 3 / aspectRatio;
+        float nearPlaneDistance = 0.01f;
+        float farPlaneDistance = float.PositiveInfinity;
+        float zCoeff = (float.IsPositiveInfinity(farPlaneDistance) ? -1f : farPlaneDistance / (nearPlaneDistance - farPlaneDistance));
+
+        Matrix4x4 projectionTransform = new Matrix4x4(
+            1 / MathF.Tan(fovVertical * 0.5f) / aspectRatio, 0, 0, 0,
+            0, 1 / MathF.Tan(fovVertical * 0.5f), 0, 0,
+            0, 0, zCoeff, -1,
+            0, 0, zCoeff * nearPlaneDistance, 0
+        );
+
+        return projectionTransform;
     }
     
     public static void DrawWireframe(ObjModel model, WriteableBitmap bitmap, Color color, Camera camera, int thickness)

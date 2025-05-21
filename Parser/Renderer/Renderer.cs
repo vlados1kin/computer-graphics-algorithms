@@ -6,7 +6,7 @@ namespace Main.Renderer;
 
 public static class Renderer
 {
-    public static void Render(Scene scene, WriteableBitmap? bitmap, Color backgroundColor, Color foregroundColor, RenderMode mode)
+    public static void Render(Scene scene, CubeMap? cubeMap, WriteableBitmap? bitmap, Color backgroundColor, Color foregroundColor, RenderMode mode)
     {
         if (bitmap == null) return;
 
@@ -48,7 +48,7 @@ public static class Renderer
             {
                 foreach (var model in scene.Models)
                 {
-                    Rasterizer.DrawTexturedTriangles(model, bitmap, scene.Camera, scene.Lights);
+                    Rasterizer.DrawTexturedTriangles(model, bitmap, scene.Camera, scene.Lights, cubeMap, scene);
                 }
 
                 break;

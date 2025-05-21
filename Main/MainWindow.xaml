@@ -30,6 +30,7 @@
                 <ComboBoxItem Content="Фонг" Tag="{x:Static enum:RenderMode.FilledTrianglesPhong}" />
                 <ComboBoxItem Content="Текстура" Tag="{x:Static enum:RenderMode.FilledTexture}" />
             </ComboBox>
+            <Button Focusable="False" Content="Карты" Margin="5" Padding="5" Command="{Binding LoadCubeMapCommand}"/>
         </StackPanel>
 
         <StackPanel Grid.Row="1" Name="ImagePanel" Background="Black" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
