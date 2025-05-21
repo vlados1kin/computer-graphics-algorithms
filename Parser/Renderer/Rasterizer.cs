@@ -342,7 +342,8 @@ public static class Rasterizer
                 if (depth < _buffer![x, y])
                 {
                     _buffer[x, y] = depth;
-                    var uv = alpha * uv0 / uv0.Z + beta * uv1 / uv1.Z + gamma * uv2 / uv2.Z;
+                    var uv = alpha * uv0 + beta * uv1 + gamma * uv2;
+                    uv /= uv.Z;
                     var fragWorld = alpha * w0 + beta * w1 + gamma * w2;
                     var interpNormal = Vector3.Normalize(alpha * n0 + beta * n1 + gamma * n2);
                     if (normalMap != null)
