@@ -382,17 +382,6 @@ public static class Rasterizer
                         specularColor = specColor.ToVector3();
                     }
 
-                    Matrix4x4.Invert(camera.GetCameraTransformation(), out Matrix4x4 invCameraTransform);
-
-                    Vector3 cameraReflectDir = Vector3.TransformNormal(Vector3.Reflect(camera.Target, interpNormal), invCameraTransform);
-
-                    var reflectColor = _cubeMap != null
-                        ? new Vector3(_cubeMap.SampleBackground(cameraReflectDir).X,
-                            _cubeMap.SampleBackground(cameraReflectDir).Y,
-                            _cubeMap.SampleBackground(cameraReflectDir).Z)
-                        : new Vector3(1);
-                    specularColor *= reflectColor;
-                    
                     var viewDir = Vector3.Normalize(camera.Eye - fragWorld);
                     var lighting = Light.ApplyPhongShading(lights, interpNormal, viewDir, fragWorld, ambientColor, material.Ka, diffuseColor, material.Kd, specularColor, material.Shininess);
                     lighting = Vector3.Clamp(lighting, Vector3.Zero, new Vector3(255, 255, 255));
@@ -407,32 +396,32 @@ public static class Rasterizer
         if (_cubeMap == null)
             return;
 
-        Matrix4x4.Invert(GetProjectionTransform(width, height), out var invProjectionTransform);
-        Matrix4x4.Invert(camera.GetCameraTransformation(), out var invCameraTransform);
-        Vector3 rayOrigin = camera.GetCameraWorldPos();
-        
-        var cubeMapRotation =
-            Matrix4x4.CreateRotationX(scene.SelectedModel!.Rotation.X)
-            * Matrix4x4.CreateRotationY(scene.SelectedModel!.Rotation.Y)
-            * Matrix4x4.CreateRotationZ(scene.SelectedModel!.Rotation.Z);
-
         var rawPointer = (uint*)bitmap;
+        float aspectRatio = (float)width / height;
+        float fovVertical = MathF.PI / 3 / aspectRatio;
+        float tanHalfFov = MathF.Tan(fovVertical * 0.5f);
+
+        // Вычисляем базовые векторы камеры
+        Vector3 forward = Vector3.Normalize(camera.Target - camera.Eye);
+        Vector3 right = Vector3.Normalize(Vector3.Cross(forward, camera.Up));
+        Vector3 up = Vector3.Cross(right, forward);
 
         Parallel.For(0, height, y =>
         {
-            float v = 1.0f - ((float)y / height) * 2.0f;
-
             for (int x = 0; x < width; x++)
             {
-                float u = ((float)x / width) * 2.0f - 1.0f;
+                // Нормализованные координаты экрана от -1 до 1
+                float ndcX = (2.0f * x / width) - 1.0f;
+                float ndcY = 1.0f - (2.0f * y / height);
 
-                Vector3 farNdc = new Vector3(u, v, 0.999f);
-                Vector4 farView = Vector4.Transform(new Vector4(farNdc, 1), invProjectionTransform);
-                farView /= farView.W;
-                farView = Vector4.Transform(farView, invCameraTransform);
-                Vector3 rayDirection = Vector3.Normalize(new Vector3(farView.X, farView.Y, farView.Z) - rayOrigin);
-                rayDirection = Vector3.Transform(rayDirection, cubeMapRotation);
+                // Вычисляем направление луча в мировых координатах
+                Vector3 rayDirection = Vector3.Normalize(
+                    forward + 
+                    right * (ndcX * tanHalfFov * aspectRatio) + 
+                    up * (ndcY * tanHalfFov)
+                );
 
+                // Сэмплируем кубкарту
                 var sampled = _cubeMap.SampleBackground(rayDirection);
                 var pixelColor = new Vector3(sampled.X, sampled.Y, sampled.Z);
 

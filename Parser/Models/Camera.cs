@@ -12,8 +12,10 @@ public class Camera
     public float ZNear { get; set; } = 0.01f;
     public float ZFar { get; set; } = 100f;
     public float Radius { get; set; } = 5;
-    public float Zeta { get; set; } = (float)Math.PI / (float)2.3;
-    public float Phi { get; set; } = (float)Math.PI / 2;
+    
+    // Исправляем углы для горизонтального взгляда вперед:
+    public float Zeta { get; set; } = 0f;  // Азимутальный угол (поворот вокруг Y)
+    public float Phi { get; set; } = 0f;   // Полярный угол (0 = горизонтально, π/2 = вверх, -π/2 = вниз)
 
     public Matrix4x4 GetViewMatrix()
     {
@@ -25,57 +27,54 @@ public class Camera
         return Transformations.CreatePerspectiveProjection(Fov, Aspect, ZNear, ZFar);
     }
 
-    public void ChangeEye()
-    {
-        Eye = new Vector3(
-            Radius * MathF.Cos(Phi) * MathF.Sin(Zeta),
-            Radius * MathF.Cos(Zeta),
-            Radius * MathF.Sin(Phi) * MathF.Sin(Zeta));
-    }
-    
     public Vector3 GetCameraWorldPos()
     {
-        var (sinX, cosX) = MathF.SinCos(DegreesToRadians(Zeta));
-        var (sinY, cosY) = MathF.SinCos(DegreesToRadians(Phi));
-
+        var (sinZeta, cosZeta) = MathF.SinCos(Zeta);
+        var (sinPhi, cosPhi) = MathF.SinCos(Phi);
         return new Vector3
         {
-            X = cosX * cosY * Radius,
-            Z = sinX * cosY * Radius,
-            Y = sinY * Radius
+            X = cosZeta * cosPhi * Radius,
+            Z = sinZeta * cosPhi * Radius,
+            Y = sinPhi * Radius
         };
     }
-    
+
     public Matrix4x4 GetCameraTransformation()
     {
-        (float sinX, float cosX) = MathF.SinCos(DegreesToRadians(Zeta));
-        (float sinY, float cosY) = MathF.SinCos(DegreesToRadians(Phi));
-
+        (float sinZeta, float cosZeta) = MathF.SinCos(Zeta);
+        (float sinPhi, float cosPhi) = MathF.SinCos(Phi);
         var eye = new Vector3
         {
-            X = cosX * cosY * Radius,
-            Z = sinX * cosY * Radius,
-            Y = sinY * Radius
+            X = cosZeta * cosPhi * Radius,
+            Z = sinZeta * cosPhi * Radius,
+            Y = sinPhi * Radius
         };
-
-        var target = new Vector3(0, 0, 0);
-
+        var target = Target;
         var zAxis = Vector3.Normalize(eye - target);
-        var xAxis = Vector3.Normalize(new Vector3(-sinX, 0, cosX));
+        var xAxis = Vector3.Normalize(new Vector3(-sinZeta, 0, cosZeta));
         var yAxis = Vector3.Normalize(Vector3.Cross(xAxis, zAxis));
-
-
-        var view = new Matrix4x4(xAxis.X, yAxis.X, zAxis.X, 0,
+        var view = new Matrix4x4(
+            xAxis.X, yAxis.X, zAxis.X, 0,
             xAxis.Y, yAxis.Y, zAxis.Y, 0,
             xAxis.Z, yAxis.Z, zAxis.Z, 0,
             -Vector3.Dot(xAxis, eye),
             -Vector3.Dot(yAxis, eye),
             -Vector3.Dot(zAxis, eye),
             1);
-
         return view;
     }
-    
+
+    public void ChangeEye()
+    {
+        var (sinZeta, cosZeta) = MathF.SinCos(Zeta);
+        var (sinPhi, cosPhi) = MathF.SinCos(Phi);
+        
+        Eye = new Vector3(
+            Radius * cosPhi * cosZeta + Target.X,
+            Radius * sinPhi + Target.Y,
+            Radius * cosPhi * sinZeta + Target.Z);
+    }
+
     private float DegreesToRadians(float angle)
     {
         return (float)(angle / 180 * Math.PI);
